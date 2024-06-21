@@ -1,0 +1,48 @@
+#searchFormContainer {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px; /* Ajout d'un peu de marge intérieure pour mieux voir l'ombre */
+}
+
+#searchForm {
+    width: 100%;
+}
+
+#searchForm input[type="text"],
+#searchForm input[type="number"],
+#searchForm button {
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+#searchForm button {
+    background-color: grey;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.left button{
+    width: 150px;
+    height: 30px;
+    font-size: 15px;
+    border-radius: 20px;
+    border:2px solid white;
+    background-color:transparent;
+    color:white;
+    margin:20px 0px;
+}
+a{
+    padding:5px 15px;
+    color:orange;
+    font-size: 20px;
+    text-decoration:none;
+}
+a:hover{
+    color:black;
+    text-decoration: underline;
+    text-underline-position:under;
+}

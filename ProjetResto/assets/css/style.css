@@ -1,0 +1,69 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    width: 99%;
+    height: 97%;
+    background-image: url('../images/fond.jpg');
+    background-size: cover;
+}
+
+.top {
+    display: flex;
+    justify-content: center; /* Center logo and image */
+    height: 80px;
+    align-items: center;
+    padding: 0px 40px;
+}
+
+.logo {
+    font-size: 30px;
+    color: rgb(38, 255, 0);
+    display: flex;
+    align-items: center;
+}
+
+.logo-img {
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    border-radius: 50%; /* Make the image round */
+    margin-right: 10px; /* Space between the image and text */
+}
+
+.heading {
+    display: flex;
+    justify-content: center; /* Center buttons */
+    padding-top: 65px;
+    align-items: center;
+}
+
+.buttons {
+    display: flex; /* Display buttons side by side */
+    gap: 10px; /* Add space between buttons */
+}
+
+.buttons button {
+    width: 150px;
+    height: 30px;
+    font-size: 15px;
+    border-radius: 20px;
+    border: 2px solid white;
+    background-color: white; /* Set background color to white */
+    color: green; /* Set text color to green */
+}
+
+.buttons button a {
+    color: green; /* Set link text color to green */
+    text-decoration: none; /* Remove underline from links */
+}
+
+.buttons button:hover {
+    background-color: green; /* Set background color to green on hover */
+    color: white; /* Set text color to white on hover */
+}
+
+.buttons button:hover a {
+    color: white; /* Set link text color to white on hover */
+}

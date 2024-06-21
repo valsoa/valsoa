@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SIG'leo</title>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    
+    <div class="left">
+        <button><a href="front-office.html">front-office</a></button>    
+    </div>
+
+    
+    <h1>Restaurant</h1>
+    <div class="popup-overlay"></div>
+    <div id="restaurantFormPopup">
+        <form id="restaurantForm">
+            Nom: <input type="text" name="name" id="name" required><br>
+            Image: <input type="file" name="image" id="image" required><br>
+            <button type="button" onclick="submitRestaurant()">Ajouter</button>
+            <br>
+            <button type="button" onclick="hideRestaurantFormPopup()">Annuler</button>
+        </form>
+    </div>
+    <div id="map"></div><br>
+    <h2>Liste des Restaurants</h2>
+    <div id="restaurantList"></div>
+
+    <script>
+        var map;
+        var marker;
+        var coordinates;
+        var markers = [];
+
+        function initialize() {
+            var mapOptions = {
+                zoom: 15,
+                center: new google.maps.LatLng(-18.986021, 47.532735),
+            };
+            map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+            google.maps.event.addListener(map, 'click', function(event) {
+                placeMarker(event.latLng);
+                showRestaurantFormPopup();
+            });
+
+            loadRestaurants();
+        }
+
+        function placeMarker(location) {
+            if (marker) {
+                marker.setPosition(location);
+            } else {
+                marker = new google.maps.Marker({
+                    position: location,
+                    map: map
+                });
+            }
+            coordinates = location.lat() + ',' + location.lng();
+        }
+
+        function showRestaurantFormPopup() {
+            $('#restaurantFormPopup').fadeIn();
+            $('.popup-overlay').fadeIn();
+        }
+
+        function hideRestaurantFormPopup() {
+            $('#restaurantFormPopup').fadeOut();
+            $('.popup-overlay').fadeOut();
+        }
+
+        $(document).ready(function() {
+            $('#openPopupBtn').click(function() {
+                showRestaurantFormPopup();
+            });
+            $('.popup-overlay').click(function() {
+                hideRestaurantFormPopup();
+            });
+        });
+        google.maps.event.addDomListener(window, 'load', initialize);
+
+        function submitRestaurant() {
+            var formData = new FormData();
+            formData.append('name', $('#name').val());
+            formData.append('image', $('#image')[0].files[0]);
+            formData.append('coordinates', coordinates);
+
+            $.ajax({
+                url: 'php/add_restaurant.php',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    alert('Restaurant ajouté avec succès!');
+                    loadRestaurants(); // Recharger la liste des restaurants
+                    hideRestaurantFormPopup();
+                }
+            });
+        }
+
+        function loadRestaurants() {
+            $.ajax({
+                url: 'php/get_restaurants.php',
+                type: 'GET',
+                success: function(response) {
+                    var restaurants = JSON.parse(response);
+                    var restaurantList = $('#restaurantList');
+                    restaurantList.empty();
+                    clearMarkers();
+
+                    for (var i = 0; i < restaurants.length; i++) {
+                        var restaurant = restaurants[i];
+                        var latLng = new google.maps.LatLng(restaurant.latitude, restaurant.longitude);
+                        var marker = new google.maps.Marker({
+                            position: latLng,
+                            map: map,
+                            title: restaurant.name
+                        });
+                        markers.push(marker);
+
+                        var restaurantDiv = '<div class="restaurant">' +
+                            '<img src="assets/images/' + restaurant.image + '" alt="Image du restaurant">' +
+                            '<div><strong>' + restaurant.name + '</strong><br>Coordonnées: ' + restaurant.latitude + ', ' + restaurant.longitude + '</div>' +
+                            '<button type="button" onclick="showMenuForm(' + restaurant.id + ')">Ajouter un menu</button>' +
+                            '</div>';
+                        restaurantList.append(restaurantDiv);
+                    }
+                }
+            });
+        }
+
+        function showMenuFormPopup() {
+            $('#menuFormPopup').fadeIn();
+            $('.menu-popup-overlay').fadeIn();
+        }
+
+        function hideMenuFormPopup() {
+            $('#menuFormPopup').fadeOut();
+            $('.menu-popup-overlay').fadeOut();
+        }
+
+        $(document).ready(function() {
+            $('#restaurantList').on('click', '.showMenuFormBtn', function() {
+                var restaurantId = $(this).data('restaurant-id');
+                showMenuFormPopup(restaurantId);
+            });
+
+            $('.menu-popup-overlay').click(function() {
+                hideMenuFormPopup();
+            });
+        });
+
+
+        function showMenuForm(restaurantId) {
+            var menuForm = '<form id="menuForm">' +
+                '<input type="hidden" name="restaurant_id" value="' + restaurantId + '">' +
+                'Nom du menu: <input type="text" name="menuName" required><br>' +
+                '<button type="button" onclick="submitMenu()">Ajouter Menu</button>' +
+                '<br>'+
+                '<button type="button" onclick="hideMenuFormPopup()">Annuler</button>' +
+                '</form>';
+            
+            $('#restaurantList').after('<div class="menu-popup-overlay"></div>');
+            $('#restaurantList').after('<div id="menuFormPopup">' + menuForm + '</div>');
+
+            showMenuFormPopup();
+        }
+
+        function submitMenu() {
+            var menuData = {
+                restaurant_id: $('#menuForm input[name="restaurant_id"]').val(),
+                name: $('#menuForm input[name="menuName"]').val()
+            };
+
+            $.ajax({
+                url: 'php/add_menu.php',
+                type: 'POST',
+                data: menuData,
+                success: function(response) {
+                    alert('Menu ajouté avec succès!');
+                    $('#menuForm').remove(); // Supprime le formulaire après l'ajout
+                    // Recharge la liste des restaurants pour afficher le nouveau menu
+                    loadRestaurants();
+                    hideMenuFormPopup();
+                },
+                error: function(xhr, status, error) {
+                    alert('Erreur lors de l\'ajout du menu');
+                    console.log(xhr.responseText);
+                }
+            });
+        }
+
+        function clearMarkers() {
+            for (var i = 0; i < markers.length; i++) {
+                markers[i].setMap(null);
+            }
+            markers = [];
+        }
+
+    </script>
+</body>
+</html>
