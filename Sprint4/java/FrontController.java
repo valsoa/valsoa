@@ -1,10 +1,14 @@
 package util;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.http.HttpResponse;
 import java.rmi.server.ServerCloneException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +30,77 @@ public class FrontController extends HttpServlet {
         listeController = Util.allMappingUrls(packages,util.Annotation.AnnotationController.class,context);
         urlMapping =Util.getUrlMapping(listeController);
 
-    }                                                                                                                                                                                               
-    public Object getValue(String methodName, String className){
+    }     
+    protected Object typage(String paramValue ,String paramName, Class paramType){
+        Object o = null ;
+        if (paramType == Date.class || paramType == java.sql.Date.class) {
+            try {
+                o = java.sql.Date.valueOf(paramValue);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid date format for parameter: " + paramName);
+            }
+        } else if (paramType == int.class) {
+            o = Integer.parseInt(paramValue);
+        } else if (paramType == double.class) {
+            o = Double.parseDouble(paramValue);
+        } else if (paramType == boolean.class) {
+            o =Boolean.parseBoolean(paramValue);
+        } else {
+            o = paramValue; 
+        }
+        return o;
+    }
+    public Object[] getAllParams(Method method,HttpServletRequest req)throws IllegalArgumentException{
+        Parameter[] parametres = method.getParameters();
+        Object[] params = new Object[parametres.length];
+
+        for (int i = 0; i < parametres.length; i++) {
+            String nameParam ="";
+            if(parametres[i].isAnnotationPresent(util.Annotation.AnnotationParameter.class)){
+                nameParam=parametres[i].getAnnotation(util.Annotation.AnnotationParameter.class).value();
+            }
+            else{
+                nameParam=parametres[i].getName();
+            }
+
+            Class<?> typeParametre = parametres[i].getType();
+            if (!typeParametre.isPrimitive() && !typeParametre.equals(String.class)) {
+            try {
+                Object paramObject = typeParametre.getDeclaredConstructor().newInstance();
+                Field[] fields = typeParametre.getDeclaredFields();
+                
+                for (Field field : fields) {
+                    String fieldName = field.getName();
+                    String fieldValue = req.getParameter(nameParam + "." + fieldName);
+                    if (fieldValue != null) {
+                        field.setAccessible(true);
+                        Object typedValue = typage(fieldValue, fieldName, field.getType());
+                        field.set(paramObject, typedValue);
+                    }
+                }
+                params[i] = paramObject;
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                throw new IllegalArgumentException("Error creating parameter object: " + nameParam, e);
+            }
+        } else {
+            String paramValue = req.getParameter(nameParam);
+            if (paramValue == null) {
+                throw new IllegalArgumentException("Missing parameter: " + nameParam);
+            }
+            params[i] = typage(paramValue, nameParam, typeParametre);
+        }
+        }
+        return params;
+    }               
+
+    public Object getValue(Mapping mapping, String className,HttpServletRequest req){
         try{
             Class<?> clas =Class.forName(className);
-            Method method =clas.getMethod(methodName);
+            Method method =clas.getMethod(mapping.getMethodName(),mapping.getTypes()); 
             Object obj = clas.newInstance();
-            return method.invoke(obj);
-        }
+            Object[] objectParam=getAllParams(method,req);
+            return method.invoke(obj,objectParam);
+        } 
         catch(Exception e){
             return null;
         }
@@ -52,7 +119,7 @@ public class FrontController extends HttpServlet {
             String url = entry.getKey();
             Mapping value = entry.getValue();
             if(url.equals(req.getRequestURI())){
-                Object urlValue=getValue(value.getMethodName(),value.getClassName());
+                Object urlValue= getValue(value,value.getClassName(),req);
                 resp.getWriter().println("<br>valeur:" + value.getClassName() +"_"+ value.getMethodName());
                 if(urlValue instanceof String s){
                     resp.getWriter().println("<br>valeur methode:"+s);
@@ -60,14 +127,17 @@ public class FrontController extends HttpServlet {
                 else if(urlValue instanceof ModelView m){
                     sendModelView(m,req,resp);
                 }
+                else{
+                    // resp.getWriter().println("<br>type de retour non valide"); tsy azo ato zaooo
+                    throw new IllegalArgumentException("type de retour non valide");
+                }
                 test=true;
                 break;
             }    
         }
         if (!test) {
-            resp.getWriter().println("<br>not found");
+            throw new IllegalArgumentException("url innexistante");
         }
-        
     }
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         processRequest(req, resp);

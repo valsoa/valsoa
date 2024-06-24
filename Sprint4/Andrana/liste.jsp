@@ -8,5 +8,12 @@
 <body>
     <p>Nom:<%= request.getAttribute("nom")%></p>
     <p>Age:<%= request.getAttribute("age")%></p>
+    <p>
+        <form action="objetType" method="get">
+            <input type="text" name="objet.nom">
+            <input type="number" name="objet.age">
+            <input type="submit" value="valider">
+        </form>
+    </p>
 </body>
 </html>
